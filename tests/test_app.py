@@ -152,3 +152,20 @@ def test_fetch_product_maps_openfoodfacts_fields(mock_get):
         "ingredients": "Sugar, palm oil, hazelnuts",
         "image_url": "https://example.com/nutella.jpg"
     }
+
+
+@patch("app.requests.get")
+def test_fetch_product_unknown_barcode_returns_none(mock_get):
+    mock_get.return_value = make_response(404, {"status": 0})
+
+    assert fetch_product(barcode="0000000000000") is None
+
+
+@patch("app.requests.get")
+def test_barcode_lookup_unknown_barcode_returns_404(mock_get, client):
+    mock_get.return_value = make_response(404, {"status": 0})
+
+    response = client.get("/products/barcode/0000000000000")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Product not found"
