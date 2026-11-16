@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import patch
-from app import app, inventory
+import requests
+from unittest.mock import Mock, patch
+from app import app, fetch_product, inventory
 
 
 @pytest.fixture
@@ -110,3 +111,61 @@ def test_import_external_product(mock_fetch, client):
     assert response.status_code == 201
     assert response.get_json()["name"] == "Imported Product"
     mock_fetch.assert_called_once_with(barcode="5555555555555")
+
+
+def make_response(status_code=200, payload=None):
+    """Build a fake requests response for testing fetch_product."""
+    response = Mock()
+    response.status_code = status_code
+    response.json.return_value = payload or {}
+
+    # Real requests responses raise an error for 4xx/5xx status codes.
+    if status_code >= 400:
+        response.raise_for_status.side_effect = requests.HTTPError(
+            f"{status_code} Error"
+        )
+    else:
+        response.raise_for_status.return_value = None
+
+    return response
+
+
+@patch("app.requests.get")
+def test_fetch_product_maps_openfoodfacts_fields(mock_get):
+    mock_get.return_value = make_response(200, {
+        "status": 1,
+        "product": {
+            "code": "3017620422003",
+            "product_name": "Nutella",
+            "brands": "Ferrero",
+            "ingredients_text": "Sugar, palm oil, hazelnuts",
+            "image_front_url": "https://example.com/nutella.jpg"
+        }
+    })
+
+    product = fetch_product(barcode="3017620422003")
+
+    assert product == {
+        "barcode": "3017620422003",
+        "name": "Nutella",
+        "brand": "Ferrero",
+        "ingredients": "Sugar, palm oil, hazelnuts",
+        "image_url": "https://example.com/nutella.jpg"
+    }
+
+
+@patch("app.requests.get")
+def test_fetch_product_unknown_barcode_returns_none(mock_get):
+    mock_get.return_value = make_response(404, {"status": 0})
+
+    assert fetch_product(barcode="0000000000000") is None
+
+
+@patch("app.requests.get")
+def test_barcode_lookup_unknown_barcode_returns_404(mock_get, client):
+    mock_get.return_value = make_response(404, {"status": 0})
+
+    response = client.get("/products/barcode/0000000000000")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Product not found"
