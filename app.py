@@ -196,6 +196,11 @@ def fetch_product(barcode=None, name=None):
             timeout=10
         )
 
+        # OpenFoodFacts answers 404 when it does not know a barcode.
+        # That means "product not found", not "the external API failed".
+        if response.status_code == 404:
+            return None
+
         response.raise_for_status()
         result = response.json()
 
