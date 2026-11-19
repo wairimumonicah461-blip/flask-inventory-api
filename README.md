@@ -9,14 +9,12 @@ A Python REST API and command-line inventory management application built with F
 - Search OpenFoodFacts products by name or barcode.
 - Import external products into the inventory.
 - Manage inventory through a command-line interface.
-- Automated tests using pytest and unittest.mock.
 
 ## Technologies
 
 - Python
 - Flask
 - Requests
-- pytest
 - OpenFoodFacts API
 
 ## Setup
@@ -66,12 +64,6 @@ python cli.py
 | GET | `/products/barcode/<barcode>` | Search by barcode |
 | GET | `/products/search?name=milk` | Search by name |
 | POST | `/products/import` | Import a product |
-
-## Run tests
-
-```bash
-python -m pytest -v
-```
 
 ## Data storage
 
